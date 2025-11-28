@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ToDo Client</title>
+    <style>
+        body { font-family: sans-serif; padding: 20px; }
+        .container { max-width: 500px; margin: 0 auto; }
+        button { padding: 10px 20px; background: #007bff; color: white; border: none; cursor: pointer; font-size: 16px; border-radius: 5px; }
+        button:hover { background: #0056b3; }
+        ul { list-style: none; padding: 0; margin-top: 20px; }
+        li { background: #f8f9fa; margin: 5px 0; padding: 10px; border: 1px solid #ddd; border-radius: 4px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Мій Список Справ</h1>
+    <button onclick="loadItems()">Завантажити список</button>
+    <ul id="list"></ul>
+</div>
+
+<script>
+    async function loadItems() {
+        try {
+            // Зверніть увагу: ми прибрали "http://localhost:3000"
+            // Тепер шлях відносний
+            const response = await fetch('/items');
+            const result = await response.json();
+
+            const listElement = document.getElementById('list');
+            listElement.innerHTML = '';
+
+            result.data.forEach(item => {
+                const li = document.createElement('li');
+                li.textContent = `${item.id}. ${item.name}`;
+                listElement.appendChild(li);
+            });
+
+        } catch (error) {
+            console.error('Помилка:', error);
+            alert('Помилка завантаження даних.');
+        }
+    }
+</script>
+
+</body>
+</html>
