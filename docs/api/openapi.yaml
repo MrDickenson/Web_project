@@ -1,0 +1,198 @@
+openapi: 3.0.3
+info:
+  title: To-Do System API
+  description: API для керування завданнями (To-Do System).
+  version: 1.0.0
+servers:
+  - url: http://localhost:3000
+    description: Локальний сервер
+
+paths:
+  /items:
+    get:
+      summary: Отримати список завдань
+      tags:
+        - Items
+      responses:
+        '200':
+          description: Успішна операція
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ItemResponse'
+    post:
+      summary: Створити нове завдання
+      tags:
+        - Items
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateItemRequest'
+      responses:
+        '201':
+          description: Завдання створено
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ItemResponse'
+        '400':
+          description: Помилка валідації
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /items/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        description: Унікальний ідентифікатор завдання
+        schema:
+          type: string
+          example: "t-12345"
+    get:
+      summary: Отримати деталі завдання
+      tags:
+        - Items
+      responses:
+        '200':
+          description: Завдання знайдено
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ItemResponse'
+        '404':
+          description: Завдання не знайдено
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    patch:
+      summary: Оновити завдання
+      tags:
+        - Items
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateItemRequest'
+      responses:
+        '200':
+          description: Завдання оновлено
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ItemResponse'
+        '400':
+          description: Помилка валідації
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Завдання не знайдено
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    delete:
+      summary: Видалити завдання
+      tags:
+        - Items
+      responses:
+        '204':
+          description: Завдання видалено (немає вмісту)
+        '404':
+          description: Завдання не знайдено
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  schemas:
+    # --- DTOs ---
+    CreateItemRequest:
+      type: object
+      required:
+        - title
+      properties:
+        title:
+          type: string
+          example: "Buy milk"
+        dueDate:
+          type: string
+          format: date
+          example: "2025-09-30"
+        priority:
+          type: string
+          enum: [low, normal, high]
+          example: "normal"
+
+    UpdateItemRequest:
+      type: object
+      properties:
+        title:
+          type: string
+          example: "Buy milk and bread"
+        priority:
+          type: string
+          enum: [low, normal, high]
+          example: "high"
+        dueDate:
+          type: string
+          format: date
+          example: "2025-09-30"
+
+    ItemResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "t-12345"
+        title:
+          type: string
+          example: "Buy milk and bread"
+        dueDate:
+          type: string
+          format: date
+          example: "2025-09-30"
+        priority:
+          type: string
+          example: "high"
+        createdAt:
+          type: string
+          format: date-time
+          example: "2025-09-06T10:15:00Z"
+        updatedAt:
+          type: string
+          format: date-time
+          example: "2025-09-06T11:20:00Z"
+
+    # --- Errors ---
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+          example: "ValidationError"
+        code:
+          type: string
+          example: "TITLE_REQUIRED"
+        details:
+          type: array
+          items:
+            type: object
+            properties:
+              field:
+                type: string
+                example: "title"
+              message:
+                type: string
+                example: "Title is required"
