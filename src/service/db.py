@@ -1,4 +1,5 @@
 import sqlite3
+import json
 
 DB_NAME = 'todo.db'
 
@@ -36,6 +37,22 @@ def init_db():
                  )
                  ''')
 
+    conn.execute('''
+                 CREATE TABLE IF NOT EXISTS idempotency_keys
+                 (
+                     key
+                     TEXT
+                     PRIMARY
+                     KEY,
+                     status_code
+                     INTEGER,
+                     response_body
+                     TEXT,
+                     created_at
+                     TEXT
+                 )
+                 ''')
+
     cursor = conn.cursor()
     cursor.execute('SELECT count(*) FROM tasks')
     count = cursor.fetchone()[0]
@@ -51,4 +68,29 @@ def init_db():
         )
         conn.commit()
 
+    conn.close()
+
+
+def get_idempotency_key(key):
+    conn = get_db_connection()
+    row = conn.execute('SELECT * FROM idempotency_keys WHERE key = ?', (key,)).fetchone()
+    conn.close()
+
+    if row:
+        return {
+            "status_code": row["status_code"],
+            "response_body": json.loads(row["response_body"])
+        }
+    return None
+
+
+def save_idempotency_key(key, status_code, response_body):
+    conn = get_db_connection()
+    conn.execute(
+        '''INSERT OR REPLACE INTO idempotency_keys 
+           (key, status_code, response_body, created_at) 
+           VALUES (?, ?, ?, datetime("now"))''',
+        (key, status_code, json.dumps(response_body))
+    )
+    conn.commit()
     conn.close()

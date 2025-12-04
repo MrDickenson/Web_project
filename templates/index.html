@@ -3,44 +3,338 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ToDo Client</title>
+    <title>To-Do System</title>
     <style>
-        body { font-family: sans-serif; padding: 20px; }
-        .container { max-width: 500px; margin: 0 auto; }
-        button { padding: 10px 20px; background: #007bff; color: white; border: none; cursor: pointer; font-size: 16px; border-radius: 5px; }
-        button:hover { background: #0056b3; }
-        ul { list-style: none; padding: 0; margin-top: 20px; }
-        li { background: #f8f9fa; margin: 5px 0; padding: 10px; border: 1px solid #ddd; border-radius: 4px; }
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #121212;
+            color: #e0e0e0;
+            margin: 0;
+            padding: 40px;
+            display: block;
+        }
+
+        .container {
+            background-color: #1e1e1e;
+            padding: 25px;
+            border: 1px solid #333;
+            border-radius: 4px;
+            width: 100%;
+            max-width: 1100px;
+            margin: 0;
+        }
+
+        .banner {
+            display: none;
+            background-color: #3e2e05;
+            color: #ffd54f;
+            border: 1px solid #664d03;
+            padding: 15px;
+            margin-bottom: 20px;
+            font-weight: bold;
+        }
+
+        .container.degraded .banner {
+            display: block;
+        }
+
+        .layout-wrapper {
+            display: flex;
+            gap: 30px;
+            align-items: flex-start;
+        }
+
+        .left-panel {
+            flex: 0 0 350px;
+        }
+
+        .right-panel {
+            flex: 1;
+        }
+
+        h1 {
+            text-align: left;
+            color: #ffffff;
+            margin-top: 0;
+            margin-bottom: 20px;
+            font-size: 1.5rem;
+            border-bottom: 2px solid #333;
+            padding-bottom: 10px;
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+
+        input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #444;
+            background-color: #2d2d2d;
+            font-size: 16px;
+            outline: none;
+            color: #fff;
+        }
+
+        input:focus {
+            background-color: #383838;
+            border-color: #666;
+        }
+
+        button {
+            width: 100%;
+            padding: 12px 25px;
+            background-color: #3a3a3a;
+            color: #e0e0e0;
+            border: 1px solid #555;
+            font-size: 16px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: background 0.2s;
+        }
+
+        button:hover:not(:disabled) {
+            background-color: #4a4a4a;
+        }
+
+        button:disabled {
+            background-color: #252525;
+            color: #666;
+            border-color: #333;
+            cursor: not-allowed;
+        }
+
+        .log-container {
+            border: 1px solid #333;
+            background-color: #1e1e1e;
+            height: 500px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .log-header {
+            background-color: #252526;
+            padding: 10px;
+            font-weight: 700;
+            color: #ccc;
+            font-size: 14px;
+            text-transform: uppercase;
+            border-bottom: 1px solid #333;
+        }
+
+        .log-area {
+            flex-grow: 1;
+            overflow-y: auto;
+            padding: 10px;
+            font-family: Consolas, monospace;
+            font-size: 13px;
+            color: #ccc;
+            background-color: #141414;
+        }
+
+        .log-entry {
+            margin-bottom: 4px;
+            padding: 2px 0;
+            border-bottom: 1px dashed #333;
+        }
+
+        .time {
+            color: #666;
+            font-weight: bold;
+            margin-right: 8px;
+        }
+
+        .msg-error { color: #f44336; font-weight: bold; }
+        .msg-warn { color: #ff9800; font-weight: bold; }
+        .msg-success { color: #4caf50; font-weight: bold; }
+
+        @media (max-width: 768px) {
+            .layout-wrapper {
+                flex-direction: column;
+            }
+            .left-panel, .right-panel {
+                width: 100%;
+                flex: none;
+            }
+            .log-container {
+                height: 300px;
+            }
+        }
     </style>
 </head>
 <body>
 
-<div class="container">
-    <h1>Мій Список Справ</h1>
-    <button onclick="loadItems()">Завантажити список</button>
-    <ul id="list"></ul>
+<div class="container" id="app">
+    <div class="banner">
+        ⚠️ Проблеми з мережею. Спробуємо зберегти завдання пізніше...
+    </div>
+
+    <div class="layout-wrapper">
+        <div class="left-panel">
+            <h1>Мої Завдання</h1>
+
+            <div class="input-group">
+                <input type="text" id="taskInput" placeholder="Що потрібно зробити?">
+                <button id="addBtn" onclick="handleCreate()">Додати Завдання</button>
+            </div>
+        </div>
+
+        <div class="right-panel">
+            <div class="log-container">
+                <div class="log-header">Історія синхронізації та подій</div>
+                <div class="log-area" id="logs">
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 
 <script>
-    async function loadItems() {
+    const BASE_URL = "";
+
+    function log(msg, type = '') {
+        const logs = document.getElementById('logs');
+        const entry = document.createElement('div');
+        entry.className = `log-entry`;
+
+        let colorClass = '';
+        if (type === 'error') colorClass = 'msg-error';
+        if (type === 'warn') colorClass = 'msg-warn';
+        if (type === 'success') colorClass = 'msg-success';
+
+        const time = new Date().toLocaleTimeString();
+        entry.innerHTML = `<span class="time">[${time}]</span> <span class="${colorClass}">${msg}</span>`;
+        logs.prepend(entry);
+    }
+
+    async function getOrReuseKey(payload) {
+        const msgBuffer = new TextEncoder().encode(JSON.stringify(payload));
+        const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+        const hashHex = Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
+
+        const storageKey = `idem:${hashHex}`;
+        const existing = localStorage.getItem(storageKey);
+
+        if (existing) {
+            log(`CACHE: Відновлено ключ (уникнення дублікату)`, 'warn');
+            return existing;
+        }
+
+        const newKey = crypto.randomUUID();
+        localStorage.setItem(storageKey, newKey);
+        log(`KEYGEN: Створено ключ ідемпотентності`);
+        return newKey;
+    }
+
+    function setDegradedMode(isDegraded) {
+        const app = document.getElementById('app');
+        const btn = document.getElementById('addBtn');
+
+        if (isDegraded) {
+            app.classList.add('degraded');
+            btn.disabled = true;
+            btn.innerText = "Збереження...";
+            setTimeout(() => {
+                btn.disabled = false;
+                btn.innerText = "Спробувати ще";
+            }, 5000);
+        } else {
+            app.classList.remove('degraded');
+            btn.disabled = false;
+            btn.innerText = "Додати Завдання";
+        }
+    }
+
+    async function fetchWithResilience(url, opts = {}) {
+        const { retry = {}, idempotencyKey, ...init } = opts;
+        const retriesMax = retry.retries ?? 3;
+        const baseDelay = retry.baseDelay ?? 500;
+
+        const headers = new Headers(init.headers || {});
+        headers.set("Content-Type", "application/json");
+
+        if (idempotencyKey) headers.set("Idempotency-Key", idempotencyKey);
+
+        const reqId = crypto.randomUUID();
+        headers.set("X-Request-Id", reqId);
+
+        let attempt = 0;
+
+        while (attempt <= retriesMax) {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 2000);
+
+            try {
+                log(`SYNC #${attempt + 1}: Відправка завдання...`);
+                const res = await fetch(url, { ...init, headers, signal: controller.signal });
+                clearTimeout(timeoutId);
+
+                if (res.status === 429) {
+                    const ra = res.headers.get("Retry-After") || 2;
+                    log(`WARN: Багато запитів. Чекаємо ${ra}с...`, 'warn');
+                    await new Promise(r => setTimeout(r, ra * 1000));
+                    attempt++;
+                    continue;
+                }
+
+                if (res.status >= 500) {
+                    throw new Error(`Помилка сервера ${res.status}`);
+                }
+
+                if (!res.ok) {
+                    const errData = await res.json();
+                    throw new Error(errData.error || "Помилка клієнта");
+                }
+
+                setDegradedMode(false);
+                return res;
+
+            } catch (err) {
+                clearTimeout(timeoutId);
+                attempt++;
+                log(`ERR: ${err.name === 'AbortError' ? 'Таймаут' : err.message}`, 'error');
+
+                if (attempt > retriesMax) {
+                    setDegradedMode(true);
+                    throw err;
+                }
+
+                const delay = (baseDelay * (2 ** (attempt - 1))) + Math.random() * 200;
+                log(`RETRY: Повторна спроба через ${Math.round(delay)}мс...`);
+                await new Promise(r => setTimeout(r, delay));
+            }
+        }
+    }
+
+    async function handleCreate() {
+        const input = document.getElementById('taskInput');
+        const title = input.value;
+        if (!title) return alert("Введіть текст завдання");
+
+        const payload = { title };
+        const key = await getOrReuseKey(payload);
+
         try {
-            // Зверніть увагу: ми прибрали "http://localhost:3000"
-            // Тепер шлях відносний
-            const response = await fetch('/items');
-            const result = await response.json();
-
-            const listElement = document.getElementById('list');
-            listElement.innerHTML = '';
-
-            result.data.forEach(item => {
-                const li = document.createElement('li');
-                li.textContent = `${item.id}. ${item.name}`;
-                listElement.appendChild(li);
+            const res = await fetchWithResilience(`${BASE_URL}/tasks`, {
+                method: 'POST',
+                body: JSON.stringify(payload),
+                idempotencyKey: key,
+                retry: { retries: 4, baseDelay: 500 }
             });
 
-        } catch (error) {
-            console.error('Помилка:', error);
-            alert('Помилка завантаження даних.');
+            const data = await res.json();
+            log(`SUCCESS: Завдання збережено! ID: ${data.id}`, 'success');
+            input.value = '';
+
+        } catch (e) {
+            log(`FATAL: Не вдалося зберегти завдання: ${e.message}`, 'error');
         }
     }
 </script>
