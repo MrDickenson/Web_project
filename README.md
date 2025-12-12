@@ -1,6 +1,6 @@
 # To-Do System
 
-![CI/CD Status](https://github.com/ВАШ_НІКНЕЙМ/НАЗВА_РЕПОЗИТОРІЮ/actions/workflows/ci.yml/badge.svg)
+![CI/CD Status](https://github.com/MrDickenson/Web_project/actions/workflows/ci.yml/badge.svg)
 
 ## Локальний запуск
 
